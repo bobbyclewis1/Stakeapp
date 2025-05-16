@@ -16,6 +16,7 @@ export default function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    console.log("Form submitted", { email, password: "[REDACTED]" });
 
     if (!email || !password) {
       setError("Please enter both email and password");
@@ -23,16 +24,31 @@ export default function LoginForm() {
     }
 
     try {
+      console.log("Attempting to sign in...");
+      console.log("Current auth state before sign in:", { user: null, loading: false });
+      
       const result = await signIn(email, password);
+      console.log("Sign in result:", result);
+
       if (result && result.user) {
         console.log("Login successful, navigating to dashboard");
+        console.log("User data:", {
+          id: result.user.id,
+          email: result.user.email,
+          metadata: result.user.user_metadata
+        });
         navigate("/dashboard");
       } else {
         console.error("Login failed: No user returned");
         setError("Login failed. Please try again.");
       }
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Login error details:", {
+        message: error.message,
+        status: error.status,
+        name: error.name,
+        stack: error.stack
+      });
       setError(error.message || "Invalid email or password");
     }
   };

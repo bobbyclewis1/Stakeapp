@@ -93,21 +93,54 @@ function useAuthState() {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
+    console.log("Auth: signIn called with email:", email);
+    try {
+      console.log("Auth: Attempting Supabase signInWithPassword...");
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // Make sure we update the user state after successful login
-    if (data && data.user) {
-      setUser(data.user);
-      await syncUserProfile(data.user);
-      console.log("User authenticated successfully:", data.user.id);
-    } else {
-      console.error("Authentication succeeded but no user data returned");
+      console.log("Auth: signIn response:", { 
+        hasData: !!data,
+        hasError: !!error,
+        errorMessage: error?.message,
+        errorStatus: error?.status
+      });
+
+      if (error) {
+        console.error("Auth: signIn error:", {
+          message: error.message,
+          status: error.status,
+          name: error.name
+        });
+        throw error;
+      }
+
+      // Make sure we update the user state after successful login
+      if (data && data.user) {
+        console.log("Auth: User authenticated successfully:", {
+          userId: data.user.id,
+          email: data.user.email,
+          hasSession: !!data.session
+        });
+        setUser(data.user);
+        await syncUserProfile(data.user);
+      } else {
+        console.error(
+          "Auth: Authentication succeeded but no user data returned",
+          { data }
+        );
+      }
+      return data;
+    } catch (err) {
+      console.error("Auth: Exception in signIn:", {
+        error: err,
+        message: err instanceof Error ? err.message : 'Unknown error',
+        stack: err instanceof Error ? err.stack : undefined
+      });
+      throw err;
     }
-    return data;
   };
 
   const signOut = async () => {
