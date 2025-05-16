@@ -37,21 +37,43 @@ async function syncUserProfile(user: User) {
 function useAuthState() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+
     // Check active sessions and sets the user
     const initializeAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
+      try {
+        console.log("Initializing auth state...");
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        const currentUser = session?.user ?? null;
+        console.log("Initial auth state:", { 
+          hasSession: !!session,
+          hasUser: !!currentUser,
+          userId: currentUser?.id
+        });
+        
+        setUser(currentUser);
 
-      if (currentUser) {
-        await syncUserProfile(currentUser);
+        if (currentUser) {
+          await syncUserProfile(currentUser);
+        }
+
+        setInitialized(true);
+        setLoading(false);
+      } catch (error) {
+        console.error("Error initializing auth state:", error);
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-
-      setLoading(false);
     };
 
     initializeAuth();
@@ -60,6 +82,10 @@ function useAuthState() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", { event, hasSession: !!session });
+      
+      if (!mounted) return;
+      
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
@@ -70,7 +96,10 @@ function useAuthState() {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -95,6 +124,11 @@ function useAuthState() {
   const signIn = async (email: string, password: string) => {
     console.log("Auth: signIn called with email:", email);
     try {
+      if (!initialized) {
+        console.log("Waiting for auth initialization...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
       console.log("Auth: Attempting Supabase signInWithPassword...");
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

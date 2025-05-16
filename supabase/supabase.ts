@@ -9,37 +9,59 @@ console.log("Environment variables check:", {
   viteEnvKeys: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
 });
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Function to initialize Supabase with retries
+async function initializeSupabase(retries = 3, delay = 1000) {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Validate environment variables
-if (!supabaseUrl) {
-  throw new Error("Missing VITE_SUPABASE_URL environment variable");
+  console.log("Attempting to initialize Supabase with:", {
+    url: supabaseUrl ? "[URL PROVIDED]" : "[MISSING URL]",
+    key: supabaseAnonKey ? "[KEY PROVIDED]" : "[MISSING KEY]",
+    retries,
+    delay
+  });
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error("Missing Supabase configuration:", {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      envKeys: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+    });
+    throw new Error("Missing Supabase configuration");
+  }
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      const client = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true
+        }
+      });
+
+      // Test the connection
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+
+      console.log("Supabase client initialized successfully on attempt", i + 1);
+      return client;
+    } catch (error) {
+      console.error(`Supabase initialization attempt ${i + 1} failed:`, error);
+      if (i === retries - 1) throw error;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw new Error("Failed to initialize Supabase client after all retries");
 }
-if (!supabaseAnonKey) {
-  throw new Error("Missing VITE_SUPABASE_ANON_KEY environment variable");
-}
 
-console.log("Initializing Supabase client with:", {
-  url: supabaseUrl ? "[URL PROVIDED]" : "[MISSING URL]",
-  key: supabaseAnonKey ? "[KEY PROVIDED]" : "[MISSING KEY]",
-  envType: import.meta.env.MODE,
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-});
-
+// Initialize Supabase
 let supabase;
 try {
-  supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true
-    }
-  });
-  console.log("Supabase client initialized successfully");
+  supabase = await initializeSupabase();
 } catch (error) {
-  console.error("Error initializing Supabase client:", error);
+  console.error("Fatal error initializing Supabase:", error);
   throw error;
 }
 
