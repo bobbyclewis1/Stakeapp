@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import env from "../src/config/env";
 
 // Debug environment variables
 console.log("Environment variables check:", {
@@ -11,28 +12,17 @@ console.log("Environment variables check:", {
 
 // Function to initialize Supabase with retries
 async function initializeSupabase(retries = 3, delay = 1000) {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  console.log("Attempting to initialize Supabase with:", {
-    url: supabaseUrl ? "[URL PROVIDED]" : "[MISSING URL]",
-    key: supabaseAnonKey ? "[KEY PROVIDED]" : "[MISSING KEY]",
+  console.log("Attempting to initialize Supabase with configuration:", {
+    hasUrl: !!env.supabase.url,
+    hasKey: !!env.supabase.anonKey,
+    mode: env.mode,
     retries,
     delay
   });
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error("Missing Supabase configuration:", {
-      hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseAnonKey,
-      envKeys: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
-    });
-    throw new Error("Missing Supabase configuration");
-  }
-
   for (let i = 0; i < retries; i++) {
     try {
-      const client = createClient(supabaseUrl, supabaseAnonKey, {
+      const client = createClient(env.supabase.url, env.supabase.anonKey, {
         auth: {
           autoRefreshToken: true,
           persistSession: true,
