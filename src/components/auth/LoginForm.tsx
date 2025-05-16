@@ -39,7 +39,14 @@ export default function LoginForm() {
 
   return (
     <AuthLayout>
-      <div className="bg-white rounded-2xl shadow-sm p-8 w-full max-w-md mx-auto">
+      <div className="space-y-8">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Please sign in to your account
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label
@@ -86,12 +93,12 @@ export default function LoginForm() {
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button
             type="submit"
-            className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-800 text-sm font-medium"
+            className="w-full h-12 rounded-lg bg-blue-600 text-white hover:bg-blue-700 text-sm font-medium"
           >
             Sign in
           </Button>
 
-          <div className="text-sm text-center text-gray-600 mt-6">
+          <div className="text-sm text-center text-gray-600">
             Don't have an account?{" "}
             <Link
               to="/signup"
